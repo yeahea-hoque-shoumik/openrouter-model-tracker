@@ -19,9 +19,12 @@ CREATE TABLE IF NOT EXISTS models (
     agentic_index          DOUBLE PRECISION,
     latency_p50            DOUBLE PRECISION,
     throughput_p50         DOUBLE PRECISION,
+    tool_calling_index     SMALLINT,
     created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE models ADD COLUMN IF NOT EXISTS tool_calling_index SMALLINT;
 
 CREATE TABLE IF NOT EXISTS free_model_status (
     model_pk            BIGINT PRIMARY KEY REFERENCES models (id),

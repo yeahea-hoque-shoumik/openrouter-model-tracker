@@ -3,7 +3,7 @@ from app.fetcher import FetchError, free_ids, parse_models
 
 import pytest
 
-from app.fetcher import extract_details
+from app.fetcher import extract_details, tool_calling_index
 
 
 
@@ -51,3 +51,13 @@ def test_extract_details_full_and_missing():
     assert d["intelligence_index"] == 25 and d["coding_index"] == 57.5 and d["agentic_index"] is None
     empty = extract_details({"name": "x"})
     assert empty["context_length"] is None and empty["intelligence_index"] is None
+    assert empty["tool_calling_index"] == 0
+
+
+def test_tool_calling_index():
+    idx = lambda p: tool_calling_index({"supported_parameters": p})
+    assert idx(["temperature"]) == 0
+    assert idx(["tools"]) == 1
+    assert idx(["tools", "tool_choice"]) == 2
+    assert idx(["tool_choice"]) == 0
+    assert tool_calling_index({"supported_parameters": None}) == 0
