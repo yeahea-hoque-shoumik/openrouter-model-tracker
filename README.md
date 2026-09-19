@@ -1,6 +1,6 @@
 # OpenRouter Free-Model Tracker
 
-Tracks OpenRouter's `:free` model catalog every 12 hours, records when models become free or stop being free, and sends a Telegram alert whenever the free list changes. History lives in Postgres, so you can answer "how many days was model X free?".
+Tracks OpenRouter's `:free` model catalog every 12 hours, records when models become free or stop being free, and sends a Telegram alert whenever the free list changes. History lives in your existing PostgreSQL server, so you can answer "how many days was model X free?".
 
 ## How it works
 
@@ -22,7 +22,7 @@ Example alert:
 
 ## Stack
 
-Python 3.12 · PostgreSQL 16 · Docker Compose · Telegram Bot API. Designed for an OCI Ampere A1 (ARM64) instance; idle almost all the time.
+Python 3.12 · PostgreSQL (existing server) · Docker Compose · Telegram Bot API. Designed for an OCI Ampere A1 (ARM64) instance; idle almost all the time.
 
 ## Setup
 
@@ -35,7 +35,7 @@ Python 3.12 · PostgreSQL 16 · Docker Compose · Telegram Bot API. Designed for
 
    | Var | Description |
    |-----|-------------|
-   | `DB_PASSWORD` | Postgres password |
+   | `DATABASE_URL` | Connection string of your existing Postgres, e.g. `postgresql://user:pass@host:5432/dbname` (must be reachable from the container; `localhost` is the container itself) |
    | `TELEGRAM_BOT_TOKEN` | Bot token |
    | `TELEGRAM_CHAT_ID` | Chat to notify |
    | `POLL_INTERVAL_HOURS` | Default `12` |
@@ -47,14 +47,24 @@ Python 3.12 · PostgreSQL 16 · Docker Compose · Telegram Bot API. Designed for
    docker compose logs -f tracker
    ```
 
-Postgres data persists in the `pgdata` named volume across restarts and updates.
+There is no bundled database. On each cycle the tracker applies `sql/init.sql` (idempotent), which creates the three tables in the target database if missing; the role needs permission to create tables.
+
+## Running a poll manually
+
+Run one poll cycle on demand (same logic and alerting as the scheduled run; it does not disturb the running scheduler):
+
+```bash
+docker compose exec tracker python -m app.main --once
+```
+
+If the container isn't running: `docker compose run --rm tracker python -m app.main --once`. Exit code is non-zero if the cycle failed.
 
 ## Querying history
 
 Days a model was free (from the event log):
 
 ```bash
-python scripts/days_free.py qwen/qwen3-32b:free
+docker compose exec tracker python scripts/days_free.py qwen/qwen3-32b:free
 ```
 
 Or raw SQL:

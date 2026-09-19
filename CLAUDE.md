@@ -4,7 +4,7 @@ Guidance for Claude Code when working in this repo.
 
 ## Project goal
 
-Poll OpenRouter's public model catalog every 12 hours, detect models that become free or stop being free (`:free` suffix on model `id`), store a queryable history in PostgreSQL, and send a Telegram alert whenever the free-model set changes. Runs as two Docker containers (tracker + postgres) on an OCI Ampere A1 (ARM64) instance.
+Poll OpenRouter's public model catalog every 12 hours, detect models that become free or stop being free (`:free` suffix on model `id`), store a queryable history in PostgreSQL, and send a Telegram alert whenever the free-model set changes. Runs as one Docker container (tracker) against an existing external PostgreSQL server on an OCI Ampere A1 (ARM64) instance.
 
 Source plan: Notion page "OpenRouter Free-Model Tracker — Project Plan". See `PHASES.md` for the phased roadmap and `README.md` for usage.
 
@@ -13,7 +13,7 @@ Source plan: Notion page "OpenRouter Free-Model Tracker — Project Plan". See `
 - Python 3.12, base image `python:3.12-slim` (must build for linux/arm64)
 - Scheduler: in-process (`APScheduler` or `while True` + sleep), every `POLL_INTERVAL_HOURS` (default 12)
 - Data source: `GET https://openrouter.ai/api/v1/models` (no API key)
-- Storage: PostgreSQL 16 (`postgres:16-alpine`), named volume `pgdata`
+- Storage: existing external PostgreSQL server (no bundled container); the app applies `sql/init.sql` idempotently at the start of each cycle
 - Alerts: Telegram Bot API, dedicated bot (NOT the `auto_shutdown_oci` bot)
 - Deploy: `docker-compose.yml`, `restart: unless-stopped`
 
@@ -54,13 +54,12 @@ The event log is the source of truth for "how many days was model X free".
 
 ## Config (env vars)
 
-| Var | Purpose |
-|-----|---------|
-| `DATABASE_URL` | `postgresql://tracker:${DB_PASSWORD}@postgres:5432/openrouter_tracker` |
-| `DB_PASSWORD` | Postgres password (compose) |
-| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
-| `TELEGRAM_CHAT_ID` | Target chat |
-| `POLL_INTERVAL_HOURS` | Default `12` |
+| Var | Purpose                                                               |
+|-----|-----------------------------------------------------------------------|
+| `DATABASE_URL` | Connection string of the existing Postgres (`postgresql://user:pass@host:5432/openrouter_models`) |
+| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather                                             |
+| `TELEGRAM_CHAT_ID` | Target chat                                                           |
+| `POLL_INTERVAL_HOURS` | Default `12`                                                          |
 
 ## Out of scope for v1
 
@@ -76,8 +75,9 @@ PLG log shipping, HTTP endpoint / Grafana panel, general price-change tracking. 
 ## Commands
 
 ```bash
-docker compose up -d --build     # start stack
+docker compose up -d --build     # start tracker
 docker compose logs -f tracker   # follow logs
 pytest                           # unit tests
-docker compose exec postgres psql -U tracker openrouter_tracker
+docker compose exec tracker python -m app.main --once   # run one poll manually
+psql "$DATABASE_URL"                # inspect data
 ```
