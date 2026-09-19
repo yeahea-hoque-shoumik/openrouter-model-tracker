@@ -15,6 +15,8 @@ def run_cycle() -> None:
     except Exception as e:
         log.error("run status=error stage=fetch error=%s", e)
         _record_error(str(e))
+        if config.NOTIFY_EVERY_RUN:
+            notifier.send_text(notifier.format_error(str(e)))
         return
 
     current_free = free_ids(all_ids)
@@ -28,9 +30,9 @@ def run_cycle() -> None:
         "run status=ok total=%d free=%d newly_free=%d became_paid=%d removed=%d baseline=%s",
         len(all_ids), len(current_free), len(diff.newly_free), len(diff.became_paid), len(diff.removed), baseline,
     )
-    # Alert only after commit; first run seeds the baseline without alerting.
-    if diff and not baseline:
-        notifier.send_alert(diff)
+    # Notify only after commit. With NOTIFY_EVERY_RUN off, alert on changes only (never on the baseline run).
+    if config.NOTIFY_EVERY_RUN or (diff and not baseline):
+        notifier.send_text(notifier.format_message(current_free, diff, baseline))
 
 
 def _record_error(message: str) -> None:
