@@ -26,11 +26,12 @@ Source plan: Notion page "OpenRouter Free-Model Tracker — Project Plan". See `
 5. Send one Telegram message: every run if `NOTIFY_EVERY_RUN=true` (default; lists currently free, newly free, no longer free), otherwise only if diff non-empty and not the first run
 6. Log run outcome (status, counts) to stdout
 
-## Schema (3 tables)
+## Schema (4 tables)
 
 - `poll_runs` — one row per run (`total_models`, `free_model_count`, `status` ok|error, `error_message`)
-- `free_model_status` — current state per model (`currently_free`, `first_seen_free_at`, `last_seen_free_at`, `last_checked_at`)
-- `free_model_events` — append-only log; `event_type` in `became_free | became_paid | removed`, FK to `poll_runs`
+- `models` — one row per model seen free (`id` PK, unique `model_id` text, `name`, `context_length`, `max_completion_tokens`, Artificial Analysis `intelligence_index`/`coding_index`/`agentic_index`, `latency_p50`, `throughput_p50`); refreshed each run. Other tables reference `models.id`, never the model name text
+- `free_model_status` — current state per model, PK/FK `model_pk` (`currently_free`, `first_seen_free_at`, `last_seen_free_at`, `last_checked_at`)
+- `free_model_events` — append-only log; FKs `run_id` → `poll_runs`, `model_pk` → `models`; `event_type` in `became_free | became_paid | removed`
 
 The event log is the source of truth for "how many days was model X free".
 
@@ -60,6 +61,7 @@ The event log is the source of truth for "how many days was model X free".
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather                                             |
 | `TELEGRAM_CHAT_ID` | Target chat                                                           |
 | `POLL_INTERVAL_HOURS` | Default `12`                                                          |
+| `OPENROUTER_API_KEY` | Optional; enables latency/throughput lookup via `/models/{id}/endpoints` (null otherwise) |
 | `NOTIFY_EVERY_RUN` | `true` (default) = message every run; `false` = only on change |
 
 ## Out of scope for v1
