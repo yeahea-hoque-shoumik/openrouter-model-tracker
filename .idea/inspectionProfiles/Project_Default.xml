@@ -1,0 +1,58 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="ignoredPackages">
+        <list>
+          <option value="annotated-doc" />
+          <option value="redis" />
+          <option value="annotated-types" />
+          <option value="anyio" />
+          <option value="bcrypt" />
+          <option value="click" />
+          <option value="colorama" />
+          <option value="ecdsa" />
+          <option value="fastapi" />
+          <option value="greenlet" />
+          <option value="h11" />
+          <option value="idna" />
+          <option value="passlib" />
+          <option value="pyasn1" />
+          <option value="pydantic" />
+          <option value="pydantic_core" />
+          <option value="pydantic-settings" />
+          <option value="python-dateutil" />
+          <option value="python-dotenv" />
+          <option value="python-jose" />
+          <option value="python-multipart" />
+          <option value="pytz" />
+          <option value="APScheduler" />
+          <option value="rsa" />
+          <option value="setuptools" />
+          <option value="six" />
+          <option value="SQLAlchemy" />
+          <option value="psycopg2-binary" />
+          <option value="starlette" />
+          <option value="typing_extensions" />
+          <option value="typing-inspection" />
+          <option value="uvicorn" />
+          <option value="jinja2" />
+          <option value="requests" />
+          <option value="google-auth" />
+          <option value="google-auth-oauthlib" />
+          <option value="google-auth-httplib2" />
+          <option value="google-api-python-client" />
+          <option value="openpyxl" />
+          <option value="httpx" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="requests" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
