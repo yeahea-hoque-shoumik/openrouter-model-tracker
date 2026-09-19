@@ -29,7 +29,11 @@ def main() -> None:
     model_id = sys.argv[1]
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         events = conn.execute(
-            "SELECT event_type, event_at FROM free_model_events WHERE model_id = %s ORDER BY event_at, id",
+            """
+            SELECT e.event_type, e.event_at FROM free_model_events e
+            JOIN models m ON m.id = e.model_pk
+            WHERE m.model_id = %s ORDER BY e.event_at, e.id
+            """,
             (model_id,),
         ).fetchall()
     if not events:

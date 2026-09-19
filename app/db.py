@@ -18,7 +18,9 @@ def init_schema() -> None:
 
 
 def get_free_set(conn: psycopg.Connection) -> set[str]:
-    rows = conn.execute("SELECT model_id FROM free_model_status WHERE currently_free").fetchall()
+    rows = conn.execute(
+        "SELECT m.model_id FROM free_model_status s JOIN models m ON m.id = s.model_pk WHERE s.currently_free"
+    ).fetchall()
     return {r[0] for r in rows}
 
 
@@ -26,7 +28,9 @@ def has_successful_run(conn: psycopg.Connection) -> bool:
     return conn.execute("SELECT EXISTS (SELECT 1 FROM poll_runs WHERE status = 'ok')").fetchone()[0]
 
 
-def save_ok_run(conn: psycopg.Connection, total_models: int, current_free: set[str], diff: Diff) -> int:
+def save_ok_run(
+    conn: psycopg.Connection, total_models: int, current_free: set[str], diff: Diff, details: dict[str, dict]
+) -> int:
     """Persist one successful run. Caller owns the transaction (commit)."""
     run_id = conn.execute(
         "INSERT INTO poll_runs (total_models, free_model_count, status) VALUES (%s, %s, 'ok') RETURNING id",
@@ -34,14 +38,36 @@ def save_ok_run(conn: psycopg.Connection, total_models: int, current_free: set[s
     ).fetchone()[0]
     now = conn.execute("SELECT now()").fetchone()[0]
 
+    # Latency/throughput keep their last known value when this run has none; the rest track the API.
+    with conn.cursor() as cur:
+        cur.executemany(
+            """
+            INSERT INTO models (model_id, name, context_length, max_completion_tokens, intelligence_index,
+                                coding_index, agentic_index, latency_p50, throughput_p50, updated_at)
+            VALUES (%(model_id)s, %(name)s, %(context_length)s, %(max_completion_tokens)s, %(intelligence_index)s,
+                    %(coding_index)s, %(agentic_index)s, %(latency_p50)s, %(throughput_p50)s, %(now)s)
+            ON CONFLICT (model_id) DO UPDATE SET
+                name = EXCLUDED.name,
+                context_length = EXCLUDED.context_length,
+                max_completion_tokens = EXCLUDED.max_completion_tokens,
+                intelligence_index = EXCLUDED.intelligence_index,
+                coding_index = EXCLUDED.coding_index,
+                agentic_index = EXCLUDED.agentic_index,
+                latency_p50 = COALESCE(EXCLUDED.latency_p50, models.latency_p50),
+                throughput_p50 = COALESCE(EXCLUDED.throughput_p50, models.throughput_p50),
+                updated_at = EXCLUDED.updated_at
+            """,
+            [{"model_id": m, "now": now, **details[m]} for m in sorted(current_free)],
+        )
+
     conn.execute("UPDATE free_model_status SET last_checked_at = %s", (now,))
     if current_free:
         conn.execute(
             """
             INSERT INTO free_model_status
-                (model_id, currently_free, first_seen_free_at, last_seen_free_at, last_checked_at)
-            SELECT m, true, %(now)s, %(now)s, %(now)s FROM unnest(%(ids)s::text[]) AS m
-            ON CONFLICT (model_id) DO UPDATE
+                (model_pk, currently_free, first_seen_free_at, last_seen_free_at, last_checked_at)
+            SELECT id, true, %(now)s, %(now)s, %(now)s FROM models WHERE model_id = ANY(%(ids)s)
+            ON CONFLICT (model_pk) DO UPDATE
                 SET currently_free = true,
                     last_seen_free_at = EXCLUDED.last_seen_free_at,
                     last_checked_at = EXCLUDED.last_checked_at
@@ -51,7 +77,10 @@ def save_ok_run(conn: psycopg.Connection, total_models: int, current_free: set[s
     gone = diff.became_paid | diff.removed
     if gone:
         conn.execute(
-            "UPDATE free_model_status SET currently_free = false WHERE model_id = ANY(%s)",
+            """
+            UPDATE free_model_status SET currently_free = false
+            WHERE model_pk IN (SELECT id FROM models WHERE model_id = ANY(%s))
+            """,
             (sorted(gone),),
         )
 
@@ -62,8 +91,11 @@ def save_ok_run(conn: psycopg.Connection, total_models: int, current_free: set[s
     )
     with conn.cursor() as cur:
         cur.executemany(
-            "INSERT INTO free_model_events (run_id, model_id, event_type, event_at) VALUES (%s, %s, %s, %s)",
-            [(run_id, m, t, now) for m, t in events],
+            """
+            INSERT INTO free_model_events (run_id, model_pk, event_type, event_at)
+            SELECT %s, id, %s, %s FROM models WHERE model_id = %s
+            """,
+            [(run_id, t, now, m) for m, t in events],
         )
     return run_id
 

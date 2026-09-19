@@ -12,16 +12,22 @@ Every 12 hours the tracker:
 4. Writes a `poll_runs` row, updates `free_model_status`, appends `free_model_events`
 5. Sends a Telegram message (every run, or only on change; see `NOTIFY_EVERY_RUN`)
 
-Example message:
+Example message (the table is a monospace block; Telegram has no native tables):
 
 ```
 📡 OpenRouter free models (2026-09-19 12:00 UTC)
-🟢 Currently free (2):
-  qwen/qwen3-32b:free
-  google/gemma-3-27b-it:free
-✅ Newly free: qwen/qwen3-32b:free
+🟢 Currently free (3):
+Model                            Ctx  Int  Code  Agent
+------------------------------  ----  ---  ----  -----
+cohere/north-mini-code          256k  9.9  36.5    1.1
+google/gemma-4-26b-a4b-it       131k    -  39.3      -
+nvidia/nemotron-3-super-120b-…  262k   25  57.5      -
+Int/Code/Agent = Artificial Analysis indexes
+✅ Newly free: cohere/north-mini-code:free
 ❌ No longer free: mistralai/mistral-small-24b:free
 ```
+
+`Lat` and `TPS` columns are added when at least one model has a value (needs `OPENROUTER_API_KEY`). Long names are shortened to 30 characters, and a very long list is trimmed to fit Telegram's message limit.
 
 With `NOTIFY_EVERY_RUN=true` a message is sent after every run (including a failure notice if the fetch fails); with `false` only when something changed. The first run only records a baseline.
 
@@ -44,6 +50,7 @@ Python 3.12 · PostgreSQL (existing server) · Docker Compose · Telegram Bot AP
    | `TELEGRAM_BOT_TOKEN` | Bot token |
    | `TELEGRAM_CHAT_ID` | Chat to notify |
    | `POLL_INTERVAL_HOURS` | Default `12` |
+   | `OPENROUTER_API_KEY` | Optional. Enables the per-model latency/throughput lookup; without it those two fields stay empty |
    | `NOTIFY_EVERY_RUN` | `true` (default): send a Telegram report on every run. `false`: alert only when the free set changes (never on the first run) |
 
 3. Start:
@@ -76,10 +83,10 @@ docker compose exec tracker python scripts/days_free.py qwen/qwen3-32b:free
 Or raw SQL:
 
 ```sql
-SELECT model_id, event_type, event_at
-FROM free_model_events
-WHERE model_id = 'qwen/qwen3-32b:free'
-ORDER BY event_at;
+SELECT m.model_id, e.event_type, e.event_at
+FROM free_model_events e JOIN models m ON m.id = e.model_pk
+WHERE m.model_id = 'qwen/qwen3-32b:free'
+ORDER BY e.event_at;
 ```
 
 Recent runs:
@@ -93,8 +100,11 @@ SELECT run_at, total_models, free_model_count, status FROM poll_runs ORDER BY ru
 | Table | Purpose |
 |-------|---------|
 | `poll_runs` | One row per poll (counts, status, error) |
-| `free_model_status` | Current free/paid state per model with first/last seen timestamps |
-| `free_model_events` | Append-only `became_free` / `became_paid` / `removed` log |
+| `models` | One row per model seen free: name, context size, Artificial Analysis intelligence/coding/agentic scores, latency/throughput. Other tables reference it by `id` |
+| `free_model_status` | Current free/paid state per model (`model_pk` → `models.id`) with first/last seen timestamps |
+| `free_model_events` | Append-only `became_free` / `became_paid` / `removed` log (`model_pk` → `models.id`) |
+
+Model details are refreshed from OpenRouter on every run. Scores are `NULL` when Artificial Analysis has none for a model. Latency/throughput are OpenRouter's median p50 across providers, exactly as reported, and only filled when `OPENROUTER_API_KEY` is set and OpenRouter returns them (they were null without a key when checked). An existing database in the older layout is migrated automatically on the next run.
 
 ## Development
 
