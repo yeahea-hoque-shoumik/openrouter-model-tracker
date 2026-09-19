@@ -23,7 +23,7 @@ Source plan: Notion page "OpenRouter Free-Model Tracker — Project Plan". See `
 2. Collect every model `id` ending in `:free`
 3. Diff against current free set in Postgres
 4. Write `poll_runs` row, upsert `free_model_status`, insert `free_model_events`
-5. If diff non-empty, send one Telegram message
+5. Send one Telegram message: every run if `NOTIFY_EVERY_RUN=true` (default; lists currently free, newly free, no longer free), otherwise only if diff non-empty and not the first run
 6. Log run outcome (status, counts) to stdout
 
 ## Schema (3 tables)
@@ -60,6 +60,7 @@ The event log is the source of truth for "how many days was model X free".
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather                                             |
 | `TELEGRAM_CHAT_ID` | Target chat                                                           |
 | `POLL_INTERVAL_HOURS` | Default `12`                                                          |
+| `NOTIFY_EVERY_RUN` | `true` (default) = message every run; `false` = only on change |
 
 ## Out of scope for v1
 

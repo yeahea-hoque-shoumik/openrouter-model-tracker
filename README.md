@@ -10,15 +10,20 @@ Every 12 hours the tracker:
 2. Extracts model ids ending in `:free`
 3. Diffs against the stored free set
 4. Writes a `poll_runs` row, updates `free_model_status`, appends `free_model_events`
-5. Sends a Telegram message if anything changed
+5. Sends a Telegram message (every run, or only on change; see `NOTIFY_EVERY_RUN`)
 
-Example alert:
+Example message:
 
 ```
-📡 OpenRouter free-model change (2026-09-19 12:00 UTC)
+📡 OpenRouter free models (2026-09-19 12:00 UTC)
+🟢 Currently free (2):
+  qwen/qwen3-32b:free
+  google/gemma-3-27b-it:free
 ✅ Newly free: qwen/qwen3-32b:free
 ❌ No longer free: mistralai/mistral-small-24b:free
 ```
+
+With `NOTIFY_EVERY_RUN=true` a message is sent after every run (including a failure notice if the fetch fails); with `false` only when something changed. The first run only records a baseline.
 
 ## Stack
 
@@ -39,6 +44,7 @@ Python 3.12 · PostgreSQL (existing server) · Docker Compose · Telegram Bot AP
    | `TELEGRAM_BOT_TOKEN` | Bot token |
    | `TELEGRAM_CHAT_ID` | Chat to notify |
    | `POLL_INTERVAL_HOURS` | Default `12` |
+   | `NOTIFY_EVERY_RUN` | `true` (default): send a Telegram report on every run. `false`: alert only when the free set changes (never on the first run) |
 
 3. Start:
 
