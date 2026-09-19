@@ -27,6 +27,13 @@ def free_ids(all_ids) -> set[str]:
     return {i for i in all_ids if i.endswith(":free")}
 
 
+def tool_calling_index(model: dict) -> int:
+    """0 = no tool support, 1 = accepts `tools`, 2 = also accepts `tool_choice` (can force/forbid tool use)."""
+    params = model.get("supported_parameters")
+    params = params if isinstance(params, list) else []
+    return int("tools" in params) + int("tools" in params and "tool_choice" in params)
+
+
 def extract_details(model: dict) -> dict:
     """Pick the stored fields out of a /models entry. Missing values become None."""
     top = model.get("top_provider") or {}
@@ -38,6 +45,7 @@ def extract_details(model: dict) -> dict:
         "intelligence_index": aa.get("intelligence_index"),
         "coding_index": aa.get("coding_index"),
         "agentic_index": aa.get("agentic_index"),
+        "tool_calling_index": tool_calling_index(model),
         "latency_p50": None,
         "throughput_p50": None,
     }

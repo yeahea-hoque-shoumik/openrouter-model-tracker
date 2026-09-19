@@ -10,14 +10,14 @@ from app.diff import Diff
 NOW = datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc)
 NO_DIFF = Diff(frozenset(), frozenset(), frozenset())
 FULL = {"context_length": 262144, "intelligence_index": 25, "coding_index": 57.5, "agentic_index": None,
-        "latency_p50": 0.8, "throughput_p50": 45}
+        "tool_calling_index": 2, "latency_p50": 0.8, "throughput_p50": 45}
 
 
 def test_table_is_aligned_with_header():
     lines = notifier.format_table({"a/model:free": FULL, "z:free": {}}).split("\n")
-    assert lines[0].split() == ["Model", "Ctx", "Int", "Code", "Agent", "Lat", "TPS"]
-    assert lines[2].split() == ["a/model", "262k", "25", "57.5", "-", "0.8", "45"]
-    assert lines[3].split() == ["z", "-", "-", "-", "-", "-", "-"]
+    assert lines[0].split() == ["Model", "Ctx", "Int", "Code", "Agent", "Tools", "Lat", "TPS"]
+    assert lines[2].split() == ["a/model", "262k", "25", "57.5", "-", "2", "0.8", "45"]
+    assert lines[3].split() == ["z", "-", "-", "-", "-", "-", "-", "-"]
     assert len({len(l) for l in lines}) == 1  # every row the same width
 
 

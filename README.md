@@ -17,12 +17,12 @@ Example message (the table is a monospace block; Telegram has no native tables):
 ```
 📡 OpenRouter free models (2026-09-19 12:00 UTC)
 🟢 Currently free (3):
-Model                            Ctx  Int  Code  Agent
-------------------------------  ----  ---  ----  -----
-cohere/north-mini-code          256k  9.9  36.5    1.1
-google/gemma-4-26b-a4b-it       131k    -  39.3      -
-nvidia/nemotron-3-super-120b-…  262k   25  57.5      -
-Int/Code/Agent = Artificial Analysis indexes
+Model                            Ctx  Int  Code  Agent  Tools
+------------------------------  ----  ---  ----  -----  -----
+cohere/north-mini-code          256k  9.9  36.5    1.1      2
+google/gemma-4-26b-a4b-it       131k    -  39.3      -      2
+nvidia/nemotron-3-super-120b-…  262k   25  57.5      -      1
+Int/Code/Agent = Artificial Analysis indexes; Tools = tool calling (0 none, 1 tools, 2 tools + tool_choice)
 ✅ Newly free: cohere/north-mini-code:free
 ❌ No longer free: mistralai/mistral-small-24b:free
 ```
@@ -100,7 +100,7 @@ SELECT run_at, total_models, free_model_count, status FROM poll_runs ORDER BY ru
 | Table | Purpose |
 |-------|---------|
 | `poll_runs` | One row per poll (counts, status, error) |
-| `models` | One row per model seen free: name, context size, Artificial Analysis intelligence/coding/agentic scores, latency/throughput. Other tables reference it by `id` |
+| `models` | One row per model seen free: name, context size, Artificial Analysis intelligence/coding/agentic scores, tool-calling index (0-2), latency/throughput. Other tables reference it by `id` |
 | `free_model_status` | Current free/paid state per model (`model_pk` → `models.id`) with first/last seen timestamps |
 | `free_model_events` | Append-only `became_free` / `became_paid` / `removed` log (`model_pk` → `models.id`) |
 

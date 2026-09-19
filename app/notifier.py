@@ -28,7 +28,8 @@ def _short(model_id: str, width: int = 30) -> str:
 def format_table(current_free: dict[str, dict]) -> str:
     """Monospace, column-aligned table. Latency/throughput columns appear only if any model has a value."""
     cols = [("Model", None), ("Ctx", "context_length"), ("Int", "intelligence_index"),
-            ("Code", "coding_index"), ("Agent", "agentic_index")]
+            ("Code", "coding_index"), ("Agent", "agentic_index"),
+            ("Tools", "tool_calling_index")]
     if any(d.get("latency_p50") is not None for d in current_free.values()):
         cols.append(("Lat", "latency_p50"))
     if any(d.get("throughput_p50") is not None for d in current_free.values()):
@@ -60,7 +61,7 @@ def format_message(current_free: dict[str, dict], diff: Diff, baseline: bool = F
     if not current_free:
         return "\n".join([head, "none"] + tail)
 
-    legend = "Int/Code/Agent = Artificial Analysis indexes"
+    legend = "Int/Code/Agent = Artificial Analysis indexes; Tools = tool calling (0 none, 1 tools, 2 tools + tool_choice)"
     models = dict(current_free)
     while True:
         omitted = len(current_free) - len(models)

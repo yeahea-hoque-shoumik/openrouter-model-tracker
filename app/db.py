@@ -43,9 +43,9 @@ def save_ok_run(
         cur.executemany(
             """
             INSERT INTO models (model_id, name, context_length, max_completion_tokens, intelligence_index,
-                                coding_index, agentic_index, latency_p50, throughput_p50, updated_at)
+                                coding_index, agentic_index, tool_calling_index, latency_p50, throughput_p50, updated_at)
             VALUES (%(model_id)s, %(name)s, %(context_length)s, %(max_completion_tokens)s, %(intelligence_index)s,
-                    %(coding_index)s, %(agentic_index)s, %(latency_p50)s, %(throughput_p50)s, %(now)s)
+                    %(coding_index)s, %(agentic_index)s, %(tool_calling_index)s, %(latency_p50)s, %(throughput_p50)s, %(now)s)
             ON CONFLICT (model_id) DO UPDATE SET
                 name = EXCLUDED.name,
                 context_length = EXCLUDED.context_length,
@@ -53,6 +53,7 @@ def save_ok_run(
                 intelligence_index = EXCLUDED.intelligence_index,
                 coding_index = EXCLUDED.coding_index,
                 agentic_index = EXCLUDED.agentic_index,
+                tool_calling_index = EXCLUDED.tool_calling_index,
                 latency_p50 = COALESCE(EXCLUDED.latency_p50, models.latency_p50),
                 throughput_p50 = COALESCE(EXCLUDED.throughput_p50, models.throughput_p50),
                 updated_at = EXCLUDED.updated_at
